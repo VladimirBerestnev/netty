@@ -1,3 +1,5 @@
+import handler.JsonDecoder;
+import handler.JsonEncoder;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -5,6 +7,10 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldPrepender;
+import io.netty.handler.codec.string.StringDecoder;
+import io.netty.handler.codec.string.StringEncoder;
 
 import java.nio.charset.StandardCharsets;
 
@@ -32,67 +38,15 @@ public class Server {
                         @Override
                         protected void initChannel(NioSocketChannel ch) {
                             ch.pipeline().addLast(
-                                    new ChannelInboundHandlerAdapter() {
-                                        String str = "";
-
-                                        @Override
-                                        public void channelRegistered(ChannelHandlerContext ctx) {
-                                            System.out.println("channelRegistered");
-                                        }
-
-                                        @Override
-                                        public void channelUnregistered(ChannelHandlerContext ctx) {
-                                            System.out.println("channelUnregistered");
-                                        }
-
-                                        @Override
-                                        public void channelActive(ChannelHandlerContext ctx) {
-                                            System.out.println("channelActive");
-                                        }
-
-                                        @Override
-                                        public void channelInactive(ChannelHandlerContext ctx) {
-                                            System.out.println("channelInactive");
-                                        }
-
-                                        @Override
-                                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                                            System.out.println("channelRead");
-
-//                                            ctx.writeAndFlush(msg);
-
-                                            final ByteBuf m = (ByteBuf) msg;
-
-                                            while (m.isReadable()){
-                                                char a = (char)m.readByte();
-                                                str = str + a;
-
-                                               System.out.println(str);
-                                               if (str.endsWith("/n")) {
-                                                   String outstr = str.replace("/n", "");
-
-                                                   final ByteBuf s = Unpooled.wrappedBuffer(outstr.getBytes(StandardCharsets.UTF_8));;
-                                                   ctx.writeAndFlush(s);
-                                                   str = "";
-                                               }
-                                           }
-//                                            final ByteBuf m = (ByteBuf) msg;
-//
-//                                           while (m.isReadable()){
-//                                               System.out.print((char)m.readByte());
-//                                           }
-//                                            System.out.flush();
-//                                            System.out.println();
-                                        }
-
-                                        @Override
-                                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                                            System.out.println("Cause exception");
-                                            cause.printStackTrace();
-                                            ctx.close();
-                                        }
-                                    }
-                            );
+                                    new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 3, 0, 3),
+                                    new LengthFieldPrepender(3),
+                                    new StringDecoder(),
+                                    new StringEncoder(),
+                                    new JsonDecoder(),
+                                    new JsonEncoder(),
+                                    new FirstServerHandler());
+                            //in -> LineBasedFrameDecoder -> JsonDecoder -> FirstServerHandler
+                            //JsonEncoder -> LengthFieldPrepender -> out
                         }
                     })
                     .option(ChannelOption.SO_BACKLOG, 128)
