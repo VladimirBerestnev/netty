@@ -12,11 +12,11 @@ import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.ReferenceCountUtil;
-import message.AuthMessage;
-import message.DateMessage;
-import message.Message;
-import message.TextMessage;
+import message.*;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Date;
@@ -47,8 +47,30 @@ public class Client {
                                     new JsonEncoder(),
                                     new SimpleChannelInboundHandler<Message>() {
                                         @Override
-                                        protected void channelRead0(ChannelHandlerContext ctx, Message msg) {
+                                        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                                            final FileRequestMessage frm = new FileRequestMessage();
+                                            frm.setPath("C:\\geekbrains\\dump.zip");
+                                            ctx.writeAndFlush(frm);
+                                        }
+
+                                        @Override
+                                        protected void channelRead0(ChannelHandlerContext ctx, Message msg) throws FileNotFoundException {
                                             System.out.println("receive msg " + msg);
+                                            if (msg instanceof FileContentMessage) {
+                                                FileContentMessage fcm = (FileContentMessage) msg;
+                                                try(final RandomAccessFile accessFile = new RandomAccessFile("C:\\geekbrains\\dump2.zip", "rw")){
+                                                    accessFile.seek(fcm.getStartPosition());
+                                                    accessFile.write(fcm.getContent());
+                                                    if (fcm.isLast()){
+                                                        ctx.close();
+                                                    }
+
+                                                } catch (IOException e) {
+                                                    e.printStackTrace();
+                                                }
+
+                                            }
+
                                         }
                                     }
                             );
@@ -59,27 +81,27 @@ public class Client {
 
             Channel channel = bootstrap.connect("localhost", 9000).sync().channel();
 
-            while (channel.isActive()) {
-                TextMessage textMessage = new TextMessage();
-                textMessage.setText(String.format("[%s] %s", LocalDateTime.now(), Thread.currentThread().getName()));
-                System.out.println("Try to send message: " + textMessage);
-                channel.writeAndFlush(textMessage);
-
-                DateMessage dateMessage = new DateMessage();
-                dateMessage.setDate(new Date());
-                channel.write(dateMessage);
-                System.out.println("Try to send message: " + dateMessage);
-                channel.flush();
-
-                AuthMessage authMessage = new AuthMessage();
-                authMessage.setLogin("user1");
-                authMessage.setPassword("user1");
-                channel.write(authMessage);
-                System.out.println("Try to send message: " + authMessage);
-                channel.flush();
-
-                Thread.sleep(3000);
-            }
+//            while (channel.isActive()) {
+//                TextMessage textMessage = new TextMessage();
+//                textMessage.setText(String.format("[%s] %s", LocalDateTime.now(), Thread.currentThread().getName()));
+//                System.out.println("Try to send message: " + textMessage);
+//                channel.writeAndFlush(textMessage);
+//
+//                DateMessage dateMessage = new DateMessage();
+//                dateMessage.setDate(new Date());
+//                channel.write(dateMessage);
+//                System.out.println("Try to send message: " + dateMessage);
+//                channel.flush();
+//
+//                AuthMessage authMessage = new AuthMessage();
+//                authMessage.setLogin("user1");
+//                authMessage.setPassword("user1");
+//                channel.write(authMessage);
+//                System.out.println("Try to send message: " + authMessage);
+//                channel.flush();
+//
+//                Thread.sleep(3000);
+//            }
 
             channel.closeFuture().sync();
         } catch (InterruptedException e) {
