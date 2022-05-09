@@ -52,10 +52,10 @@ public class FirstServerHandler extends SimpleChannelInboundHandler<Message> {
                     accessFile.read(fileContent);
                     message.setContent(fileContent);
                     message.setLast(accessFile.getFilePointer() == accessFile.length());
-                    ctx.writeAndFlush(message);
+                    ctx.writeAndFlush(message).sync();
                 }
 
-            } catch (IOException e) {
+            } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
             }
         }
