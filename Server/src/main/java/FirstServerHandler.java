@@ -11,7 +11,7 @@ import java.io.RandomAccessFile;
 
 
 public class FirstServerHandler extends SimpleChannelInboundHandler<Message> {
-    private RandomAccessFile accessFile;
+    private RandomAccessFile accessFile = null;
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
@@ -45,7 +45,6 @@ public class FirstServerHandler extends SimpleChannelInboundHandler<Message> {
                 final File file = new File(frm.getPath());
                 accessFile = new RandomAccessFile(file, "r");
                 sendfile(ctx);
-
             }
         }
     }
@@ -66,7 +65,7 @@ public class FirstServerHandler extends SimpleChannelInboundHandler<Message> {
                 message.setContent(fileContent);
                 final boolean last = accessFile.getFilePointer() == accessFile.length();
                 message.setLast(last);
-                ctx.writeAndFlush(message).addListener(new ChannelFutureListener() {
+                ctx.channel().writeAndFlush(message).addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture channelFuture) throws Exception {
                     if(!last){
@@ -77,7 +76,6 @@ public class FirstServerHandler extends SimpleChannelInboundHandler<Message> {
                     accessFile.close();
                     accessFile = null;
                 }
-
         }
     }
 
