@@ -1,3 +1,5 @@
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import message.*;
@@ -9,6 +11,8 @@ import java.io.RandomAccessFile;
 
 
 public class FirstServerHandler extends SimpleChannelInboundHandler<Message> {
+    private RandomAccessFile accessFile;
+
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
         System.out.println("New active channel");
@@ -18,7 +22,7 @@ public class FirstServerHandler extends SimpleChannelInboundHandler<Message> {
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, Message msg) throws FileNotFoundException {
+    protected void channelRead0(ChannelHandlerContext ctx, Message msg) throws IOException {
         if (msg instanceof TextMessage) {
             TextMessage message = (TextMessage) msg;
             System.out.println("incoming text message: " + message.getText());
@@ -37,27 +41,43 @@ public class FirstServerHandler extends SimpleChannelInboundHandler<Message> {
 
         if (msg instanceof FileRequestMessage) {
             FileRequestMessage frm = (FileRequestMessage) msg;
-            final File file = new File(frm.getPath());
-            try(RandomAccessFile accessFile = new RandomAccessFile(file,"r")){
-                while (accessFile.getFilePointer() != accessFile.length()){
-                    final byte[] fileContent;
-                    final long available = accessFile.length() - accessFile.getFilePointer();
-                    if (available > 64 * 1024){
-                        fileContent = new byte[64 * 1024];
-                    } else {
-                        fileContent = new byte[(int) available];
-                    }
-                    final FileContentMessage message = new FileContentMessage();
-                    message.setStartPosition(accessFile.getFilePointer());
-                    accessFile.read(fileContent);
-                    message.setContent(fileContent);
-                    message.setLast(accessFile.getFilePointer() == accessFile.length());
-                    ctx.writeAndFlush(message).sync();
+            if (accessFile == null) {
+                final File file = new File(frm.getPath());
+                accessFile = new RandomAccessFile(file, "r");
+                sendfile(ctx);
+
+            }
+        }
+    }
+
+    private void sendfile(ChannelHandlerContext ctx) throws IOException {
+        if (accessFile != null) {
+
+                final byte[] fileContent;
+                final long available = accessFile.length() - accessFile.getFilePointer();
+                if (available > 64 * 1024) {
+                    fileContent = new byte[64 * 1024];
+                } else {
+                    fileContent = new byte[(int) available];
+                }
+                final FileContentMessage message = new FileContentMessage();
+                message.setStartPosition(accessFile.getFilePointer());
+                accessFile.read(fileContent);
+                message.setContent(fileContent);
+                final boolean last = accessFile.getFilePointer() == accessFile.length();
+                message.setLast(last);
+                ctx.writeAndFlush(message).addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture channelFuture) throws Exception {
+                    if(!last){
+                    sendfile(ctx);
+                }}
+            });
+                if (last){
+                    accessFile.close();
+                    accessFile = null;
                 }
 
-            } catch (IOException | InterruptedException e) {
-                e.printStackTrace();
-            }
         }
     }
 
@@ -68,7 +88,10 @@ public class FirstServerHandler extends SimpleChannelInboundHandler<Message> {
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) {
+    public void channelInactive(ChannelHandlerContext ctx) throws IOException {
         System.out.println("client disconnect");
+        if (accessFile != null){
+            accessFile.close();
+        }
     }
 }
