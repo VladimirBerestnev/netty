@@ -41,15 +41,13 @@ public class Client {
                             ch.pipeline().addLast(
                                     new LengthFieldBasedFrameDecoder(1024 * 1024, 0, 3, 0, 3),
                                     new LengthFieldPrepender(3),
-                                    new StringDecoder(),
-                                    new StringEncoder(),
                                     new JsonDecoder(),
                                     new JsonEncoder(),
                                     new SimpleChannelInboundHandler<Message>() {
                                         @Override
                                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                                             final FileRequestMessage frm = new FileRequestMessage();
-                                            frm.setPath("C:\\geekbrains\\dump.zip");
+      //                                      frm.setPath("C:\\geekbrains\\The.Suicide.Squad.2021.D.WEB-DL.1080p.seleZen.mkv");
                                             ctx.writeAndFlush(frm);
                                         }
 
@@ -58,7 +56,7 @@ public class Client {
                                             System.out.println("receive msg " + msg);
                                             if (msg instanceof FileContentMessage) {
                                                 FileContentMessage fcm = (FileContentMessage) msg;
-                                                try(final RandomAccessFile accessFile = new RandomAccessFile("C:\\geekbrains\\dump2.zip", "rw")){
+                                                try(final RandomAccessFile accessFile = new RandomAccessFile("C:\\geekbrains\\1080p.mkv", "rw")){
                                                     accessFile.seek(fcm.getStartPosition());
                                                     accessFile.write(fcm.getContent());
                                                     if (fcm.isLast()){
@@ -81,27 +79,6 @@ public class Client {
 
             Channel channel = bootstrap.connect("localhost", 9000).sync().channel();
 
-//            while (channel.isActive()) {
-//                TextMessage textMessage = new TextMessage();
-//                textMessage.setText(String.format("[%s] %s", LocalDateTime.now(), Thread.currentThread().getName()));
-//                System.out.println("Try to send message: " + textMessage);
-//                channel.writeAndFlush(textMessage);
-//
-//                DateMessage dateMessage = new DateMessage();
-//                dateMessage.setDate(new Date());
-//                channel.write(dateMessage);
-//                System.out.println("Try to send message: " + dateMessage);
-//                channel.flush();
-//
-//                AuthMessage authMessage = new AuthMessage();
-//                authMessage.setLogin("user1");
-//                authMessage.setPassword("user1");
-//                channel.write(authMessage);
-//                System.out.println("Try to send message: " + authMessage);
-//                channel.flush();
-//
-//                Thread.sleep(3000);
-//            }
 
             channel.closeFuture().sync();
         } catch (InterruptedException e) {

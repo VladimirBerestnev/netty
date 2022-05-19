@@ -10,15 +10,14 @@ import message.Message;
 
 import java.util.List;
 
-public class JsonDecoder extends MessageToMessageDecoder<String> {
+public class JsonDecoder extends MessageToMessageDecoder<ByteBuf> {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, String msg, List<Object> out) throws Exception {
-//        final String[] bytes = ByteBufUtil.getBytes(msg);
-        Message message = OBJECT_MAPPER.readValue(msg, Message.class);
+    protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
+        final byte[] bytes = ByteBufUtil.getBytes(msg);
+        Message message = OBJECT_MAPPER.readValue(bytes, Message.class);
         out.add(message);
-        System.out.println("decode: " + message);
     }
 }
 
