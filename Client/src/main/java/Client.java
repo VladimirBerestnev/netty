@@ -47,7 +47,7 @@ public class Client {
                                         @Override
                                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                                             final FileRequestMessage frm = new FileRequestMessage();
-                                            frm.setPath("C:\\geekbrains\\The.Suicide.Squad.2021.D.WEB-DL.1080p.seleZen.mkv");
+      //                                      frm.setPath("C:\\geekbrains\\The.Suicide.Squad.2021.D.WEB-DL.1080p.seleZen.mkv");
                                             ctx.writeAndFlush(frm);
                                         }
 
@@ -56,7 +56,7 @@ public class Client {
                                             System.out.println("receive msg " + msg);
                                             if (msg instanceof FileContentMessage) {
                                                 FileContentMessage fcm = (FileContentMessage) msg;
-                                                try(final RandomAccessFile accessFile = new RandomAccessFile("C:\\geekbrains\\seleZen.mkv", "rw")){
+                                                try(final RandomAccessFile accessFile = new RandomAccessFile("C:\\geekbrains\\1080p.mkv", "rw")){
                                                     accessFile.seek(fcm.getStartPosition());
                                                     accessFile.write(fcm.getContent());
                                                     if (fcm.isLast()){
